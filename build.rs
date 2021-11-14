@@ -14,12 +14,31 @@ fn main() {
         .write_to_file("gen/anx7625.h");
 
     bindgen::Builder::default()
-        .header("driver/anx7625.c")
+        .header("driver/anx7625_pub.h")
+        // .header("driver/edid.h")
+        // .header("driver/anx7625.c")
         .use_core()
-        // .blocklist_item("*")
-        .blocklist_type("*")
+        .layout_tests(false)
+        .size_t_is_usize(true)
+        // .ctypes_prefix("ctypes")
+        .default_enum_style(bindgen::EnumVariation::Rust {
+            non_exhaustive: false,
+        })
+        .blocklist_type("AnxFnPtrs")
+        .blocklist_type("__int8_t")
+        .blocklist_type("__uint8_t")
+        .blocklist_type("__int16_t")
+        .blocklist_type("__uint16_t")
+        .blocklist_type("__int32_t")
+        .blocklist_type("__uint32_t")
+        // .blocklist_item(".*")
+        // .blocklist_type(".*")
+        // .allowlist_type("struct edid")
+        // .allowlist_type("edid")
         // .blocklist_function("*")
-        .allowlist_function("anx_.*")
+        .allowlist_type("edid")
+        .allowlist_type("edid_modes")
+        .allowlist_function("anx7625_.*")
         .generate()
         .expect("Unable to generate bindings")
         .write_to_file("gen/anx7625.rs")
@@ -27,6 +46,6 @@ fn main() {
 
     cc::Build::new()
         .cpp(false)
-        .file("driver/anx7625.c")
+        .files(&["driver/anx7625.c", "driver/edid.c"])
         .compile("libanx7625");
 }

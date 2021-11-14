@@ -1,151 +1,119 @@
-#![allow(unused)]
+#![no_std]
 
-// Make a new "public" generic struct so that Anx can be generated
+use core::mem::MaybeUninit;
 
-pub struct Bus {
-    pub _b: u8,
-}
-impl Bus {
-    pub fn new() -> Self {
-        Self { _b: 0 }
-    }
+use {
+    anx_fn_ptrs::AnxFnPtrs,
+    core::{ffi::c_void, marker::PhantomData},
+    embedded_hal::{
+        blocking::{
+            delay::DelayMs,
+            i2c::{Read as I2CRead, SevenBitAddress, Write as I2CWrite},
+        },
+        digital::v2::OutputPin,
+    },
+    tinyrlibc as _,
+};
 
-    fn write(&mut self, addr: u8, data: &[u8]) -> Result<usize, ()> {
-        println!("I2C: Writing to 0x{:0x} {:?}", addr, data);
-        Ok(10)
-    }
+mod anx_fn_ptrs;
+pub mod log;
 
-    fn read(&mut self, addr: u8, buf: &mut [u8]) -> Result<usize, ()> {
-        Ok(10)
-    }
-}
-pub struct Delay {
-    pub _d: u8,
-}
-impl Delay {
-    pub fn new() -> Self {
-        Self { _d: 0 }
-    }
+pub trait I2CReadAndWrite<E>:
+    I2CRead<SevenBitAddress, Error = E> + I2CWrite<SevenBitAddress, Error = E>
+{
 }
 
-trait DelayMs {
-    fn delay_ms(&mut self, ms: u32);
+impl<T, E> I2CReadAndWrite<E> for T
+where
+    T: I2CRead<SevenBitAddress, Error = E>,
+    T: I2CWrite<SevenBitAddress, Error = E>,
+{
 }
 
-impl DelayMs for Delay {
-    fn delay_ms(&mut self, ms: u32) {
-        std::thread::sleep(std::time::Duration::from_millis(ms as u64))
-    }
+pub struct Anx7625<
+    Bus: I2CReadAndWrite<BusError>,
+    VideoOnPin: OutputPin<Error = PinError>,
+    VideoRstPin: OutputPin<Error = PinError>,
+    OtgPin: OutputPin<Error = PinError>,
+    BusError,
+    PinError,
+    Delay: DelayMs<u32>,
+> {
+    ptrs: AnxFnPtrs,
+    video_on: VideoOnPin,
+    video_rst: VideoRstPin,
+    otg_on: OtgPin,
+    _bus: PhantomData<Bus>,
+    _bus_error: PhantomData<BusError>,
+    _pin_error: PhantomData<PinError>,
+    _d: PhantomData<Delay>,
 }
 
-use core::ffi::c_void;
-
-include!("../gen/anx7625.rs");
-
-macro_rules! cast_ptr {
-    ($expr:expr, $ty:ty) => {
-        $expr as *const _ as *const $ty
-    };
-}
-
-macro_rules! cast_ptr_mut {
-    ($expr:expr, $ty:ty) => {
-        $expr as *mut _ as *mut $ty
-    };
-}
-
-#[repr(C)]
-pub struct Anx {
-    delay: unsafe extern "C" fn(anx: *mut Self, delay: *mut c_void, ms: u32) -> (),
-    set_video_on: unsafe extern "C" fn(anx: *mut Self, state: bool) -> u8,
-    set_video_rst: unsafe extern "C" fn(anx: *mut Self, state: bool) -> u8,
-    set_otg: unsafe extern "C" fn(anx: *mut Self, state: bool) -> u8,
-    i2c_writeb: unsafe extern "C" fn(
-        anx: *mut Self,
-        bus: *mut c_void,
-        addr: u8,
-        data: *const u8,
-        len: usize,
-    ) -> u8,
-    i2c_readb: unsafe extern "C" fn(
-        anx: *mut Self,
-        bus: *mut c_void,
-        addr: u8,
-        data: *mut u8,
-        len: *mut usize,
-    ) -> u8,
-}
-
-unsafe extern "C" fn delay(anx: *mut Anx, delay: *mut c_void, ms: u32) {
-    // let mut d: &mut &mut dyn DelayMs = core::mem::transmute(delay);
-    // (**d).delay_ms(ms);
-    // Ah, yes
-    (**core::mem::transmute::<_, &mut &mut dyn DelayMs>(delay)).delay_ms(ms);
-}
-
-unsafe extern "C" fn set_video_on(anx: *mut Anx, state: bool) -> u8 {
-    0
-}
-
-unsafe extern "C" fn set_video_rst(anx: *mut Anx, state: bool) -> u8 {
-    0
-}
-
-unsafe extern "C" fn set_otg(anx: *mut Anx, state: bool) -> u8 {
-    0
-}
-
-unsafe extern "C" fn i2c_writeb(
-    anx: *mut Anx,
-    bus: *mut c_void,
-    addr: u8,
-    data: *const u8,
-    len: usize,
-) -> u8 {
-    let slice = core::slice::from_raw_parts(data, len);
-    match (&mut *cast_ptr_mut!(bus, Bus)).write(addr, slice) {
-        Ok(_) => 1,
-        Err(_) => 0,
-    }
-}
-
-unsafe extern "C" fn i2c_readb(
-    anx: *mut Anx,
-    bus: *mut c_void,
-    addr: u8,
-    data: *mut u8,
-    len: *mut usize,
-) -> u8 {
-    let slice = core::slice::from_raw_parts_mut(data, *len);
-    match (&mut *cast_ptr_mut!(bus, Bus)).read(addr, slice) {
-        Ok(bytes_read) => {
-            *len = bytes_read;
-            1
-        }
-        Err(_) => 0,
-    }
-}
-
-impl Anx {
-    pub fn new() -> Self {
+impl<
+        Bus: I2CReadAndWrite<BusError>,
+        VideoOnPin: OutputPin<Error = PinError>,
+        VideoRstPin: OutputPin<Error = PinError>,
+        OtgPin: OutputPin<Error = PinError>,
+        BusError,
+        PinError,
+        Delay: DelayMs<u32>,
+    > Anx7625<Bus, VideoOnPin, VideoRstPin, OtgPin, BusError, PinError, Delay>
+{
+    pub fn new(video_on: VideoOnPin, video_rst: VideoRstPin, otg_on: OtgPin) -> Self {
         Self {
-            delay,
-            set_video_on,
-            set_video_rst,
-            set_otg,
-            i2c_writeb,
-            i2c_readb,
+            ptrs: AnxFnPtrs::new(),
+            video_on,
+            video_rst,
+            otg_on,
+            _bus: PhantomData,
+            _bus_error: PhantomData,
+            _pin_error: PhantomData,
+            _d: PhantomData,
         }
     }
 
-    pub fn init(&mut self, bus: &mut Bus, delay: &mut Delay) -> Result<u8, ()> {
-        let res = unsafe {
-            anx_init(
-                self,
-                cast_ptr_mut!(bus, c_void),
-                cast_ptr_mut!(&mut (delay as &mut dyn DelayMs), c_void),
-            )
-        };
-        Ok(res)
+    pub fn init(&mut self, bus: &mut Bus, delay: &mut Delay) -> Result<(), i32> {
+        let mut bus = bus as &mut dyn I2CReadAndWrite<BusError>;
+        let mut delay = delay as &mut dyn DelayMs<u32>;
+        let mut video_on = &mut self.video_on as &mut dyn OutputPin<Error = PinError>;
+        let mut video_rst = &mut self.video_rst as &mut dyn OutputPin<Error = PinError>;
+        let mut otg_on = &mut self.otg_on as &mut dyn OutputPin<Error = PinError>;
+        match self.ptrs.init(
+            &mut bus as *mut _ as *mut c_void,
+            &mut delay as *mut _ as *mut c_void,
+            &mut video_on as *mut _ as *mut c_void,
+            &mut video_rst as *mut _ as *mut c_void,
+            &mut otg_on as *mut _ as *mut c_void,
+        ) {
+            0.. => Ok(()),
+            err => Err(err),
+        }
+    }
+
+    pub fn wait_hpd_event(&mut self, bus: &mut Bus, delay: &mut Delay) {
+        let mut bus = bus as &mut dyn I2CReadAndWrite<BusError>;
+        let mut delay = delay as &mut dyn DelayMs<u32>;
+        self.ptrs.wait_hpd_event(
+            &mut bus as *mut _ as *mut c_void,
+            &mut delay as *mut _ as *mut c_void,
+        )
+    }
+
+    pub fn dp_get_edid(
+        &mut self,
+        bus: &mut Bus,
+        delay: &mut Delay,
+    ) -> Result<anx_fn_ptrs::edid, i32> {
+        let mut bus = bus as &mut dyn I2CReadAndWrite<BusError>;
+        let mut delay = delay as &mut dyn DelayMs<u32>;
+        let mut edid_d = MaybeUninit::<anx_fn_ptrs::edid>::uninit();
+        match self.ptrs.dp_get_edid(
+            &mut bus as *mut _ as *mut c_void,
+            &mut delay as *mut _ as *mut c_void,
+            &mut edid_d as *mut _ as *mut anx_fn_ptrs::edid,
+        ) {
+            0.. => Ok(unsafe { edid_d.assume_init() }),
+            err => Err(err),
+        }
     }
 }

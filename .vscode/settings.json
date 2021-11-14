@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "stdio.h": "c",
+        "edid.h": "c",
+        "logging.h": "c",
+        "stdint.h": "c"
+    }
+}

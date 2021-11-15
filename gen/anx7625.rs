@@ -75,3 +75,12 @@ extern "C" {
         out: *mut edid,
     ) -> i32;
 }
+extern "C" {
+    pub fn anx7625_dp_start(
+        anx: *mut AnxFnPtrs,
+        bus: *mut ::core::ffi::c_void,
+        delay: *mut ::core::ffi::c_void,
+        edid: *const edid,
+        mode: edid_modes,
+    ) -> i32;
+}

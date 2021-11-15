@@ -398,5 +398,13 @@ int32_t wait_aux_op_finish(AnxFnPtrs *anx, void *bus, void *delay);
 int32_t sp_tx_aux_rd(AnxFnPtrs *anx, void *bus, void *delay, uint8_t len_cmd);
 int32_t edid_read(AnxFnPtrs *anx, void *bus, void *delay, uint8_t offset, uint8_t *pblock_buf);
 int32_t segments_edid_read(AnxFnPtrs *anx, void *bus, void *delay, uint8_t segment, uint8_t *buf, uint8_t offset);
+int32_t anx7625_reg_block_read(AnxFnPtrs *anx, void *bus, uint8_t saddr, uint8_t reg_addr, uint8_t len, uint8_t *buf);
+void anx7625_parse_edid(const struct edid *edid, struct display_timing *dt);
+int32_t anx7625_dsi_config(AnxFnPtrs *anx, void *bus, void *delay, struct display_timing *dt);
+int32_t anx7625_api_dsi_config(AnxFnPtrs *anx, void *bus, void *delay, struct display_timing *dt);
+int32_t anx7625_swap_dsi_lane3(AnxFnPtrs *anx, void *bus);
+int32_t anx7625_calculate_m_n(uint32_t pixelclock, unsigned long *m, unsigned long *n, uint8_t *pd);
+void anx7625_reduction_of_a_fraction(unsigned long *_a, unsigned long *_b);
+unsigned long gcd(unsigned long a, unsigned long b);
 
 #endif /* __ANX7625_H__ */

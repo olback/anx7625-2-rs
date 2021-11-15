@@ -28,17 +28,16 @@
  * at present.
  */
 
-#include <assert.h>
 //#include <commonlib/helpers.h>
 #include <stddef.h>
 //#include <console/console.h>
-#include <ctype.h>
+// #include <ctype.h>
 #include <stdint.h>
 #include <string.h>
-#include "edid.h"
 #include "../gen/anx7625.h"
-#include "logging.h"
+#include "rust_compat.h"
 #include "helpers.h"
+#include "edid.h"
 //#include <vbe.h>
 
 struct edid_context
@@ -104,9 +103,9 @@ static int manufacturer_name(unsigned char *x, char *output)
 	output[2] = (x[1] & 0x1F) + '@';
 	output[3] = 0;
 
-	if (isupper(output[0]) &&
-		isupper(output[1]) &&
-		isupper(output[2]))
+	if (isupper_compat((uint8_t)output[0]) &&
+		isupper_compat((uint8_t)output[1]) &&
+		isupper_compat((uint8_t)output[2]))
 		return 1;
 
 	memset(output, 0, 4);
@@ -502,9 +501,8 @@ detailed_block(struct edid *result_edid, unsigned char *x, int in_extension,
 			 * slots, seems to be specified by SPWG:
 			 * http://www.spwg.org/
 			 */
-			strcpy(result_edid->ascii_string, extract_string(x + 5,
-															 &c->has_valid_string_termination,
-															 EDID_ASCII_STRING_LENGTH));
+			// strcpy(result_edid->ascii_string, extract_string(x + 5, &c->has_valid_string_termination, EDID_ASCII_STRING_LENGTH));
+			strcopy_compat(result_edid->ascii_string, extract_string(x + 5, &c->has_valid_string_termination, EDID_ASCII_STRING_LENGTH));
 			vaprintk(BIOS_SPEW, "ASCII string: %s\n",
 					 result_edid->ascii_string);
 			return 1;
@@ -1177,7 +1175,7 @@ static struct edid_mode known_modes[NUM_KNOWN_MODES] = {
 	[EDID_MODE_1920x1080_60Hz] = {.name = "1920x1080@60Hz", .pixel_clock = 148500, .refresh = 60, .ha = 1920, .hbl = 280, .hso = 88, .hspw = 44, .va = 1080, .vbl = 45, .vso = 4, .vspw = 5, .phsync = '+', .pvsync = '+'},
 };
 
-int set_display_mode(struct edid *edid, enum edid_modes mode)
+int32_t set_display_mode(struct edid *edid, enum edid_modes mode)
 {
 	if (mode == EDID_MODE_AUTO)
 		return 0;
@@ -1201,7 +1199,7 @@ int set_display_mode(struct edid *edid, enum edid_modes mode)
  * but we have no way of checking this minimum length.
  * We accept what we are given.
  */
-int decode_edid(unsigned char *edid, int size, struct edid *out)
+int32_t decode_edid(uint8_t *edid, int32_t size, struct edid *out)
 {
 	int analog, i, j;
 	struct edid_context c = {
@@ -1818,11 +1816,12 @@ int decode_edid(unsigned char *edid, int size, struct edid *out)
  */
 
 /* Set the framebuffer bits-per-pixel, recalculating all dependent values. */
-void edid_set_framebuffer_bits_per_pixel(struct edid *edid, int fb_bpp,
-										 int row_byte_alignment)
+void edid_set_framebuffer_bits_per_pixel(struct edid *edid, int32_t fb_bpp,
+										 int32_t row_byte_alignment)
 {
 	/* Caller should pass a supported value, everything else is BUG(). */
-	assert(fb_bpp == 32 || fb_bpp == 24 || fb_bpp == 16);
+	// assert(fb_bpp == 32 || fb_bpp == 24 || fb_bpp == 16);
+	assert_panic(fb_bpp == 32 || fb_bpp == 24 || fb_bpp == 16, "fb_bpp value is not supported");
 	row_byte_alignment = MAX(row_byte_alignment, 1);
 
 	edid->framebuffer_bits_per_pixel = fb_bpp;

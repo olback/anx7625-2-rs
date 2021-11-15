@@ -18,7 +18,7 @@
 
 #include <stdint.h>
 #include "coreboot_tables.h"
-#include <stdio.h>
+// #include <stdio.h>
 
 #define u8 uint8_t
 #define u16 uint16_t
@@ -30,6 +30,7 @@
 // #define MIN(x, y) min(x, y)
 // #define MAX(x, y) max(x, y)
 
+#ifndef MAX
 #define MAX(a, b)                   \
     (                               \
         {                           \
@@ -37,7 +38,9 @@
             __typeof__(b) _b = (b); \
             _a > _b ? _a : _b;      \
         })
+#endif
 
+#ifndef MIN
 #define MIN(a, b)                   \
     (                               \
         {                           \
@@ -45,6 +48,7 @@
             __typeof__(b) _b = (b); \
             _a < _b ? _a : _b;      \
         })
+#endif
 
 #include <stdbool.h>
 // #include "api/Common.h"
@@ -142,7 +146,7 @@ enum edid_status
     EDID_ABSENT,
 };
 
-/* Defined in src/lib/edid.c */
+/* Defined in edid.c */
 int32_t decode_edid(uint8_t *edid, int32_t size, struct edid *out);
 void edid_set_framebuffer_bits_per_pixel(struct edid *edid, int32_t fb_bpp, int32_t row_byte_alignment);
 void set_vbe_mode_info_valid(const struct edid *edid, uintptr_t fb_addr);

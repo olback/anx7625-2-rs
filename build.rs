@@ -19,6 +19,7 @@ fn main() {
         // .header("driver/anx7625.c")
         .use_core()
         .layout_tests(false)
+        // .impl_debug(true)
         .size_t_is_usize(true)
         // .ctypes_prefix("ctypes")
         .default_enum_style(bindgen::EnumVariation::Rust {
@@ -46,6 +47,11 @@ fn main() {
 
     cc::Build::new()
         .cpp(false)
-        .files(&["driver/anx7625.c", "driver/edid.c"])
+        .files(&[
+            "driver/anx7625.c",
+            "driver/edid.c",
+            "driver/rust_compat.c",
+            "driver/video_modes.c",
+        ])
         .compile("libanx7625");
 }

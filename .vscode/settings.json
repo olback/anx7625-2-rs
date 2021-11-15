@@ -3,6 +3,11 @@
         "stdio.h": "c",
         "edid.h": "c",
         "logging.h": "c",
-        "stdint.h": "c"
+        "stdint.h": "c",
+        "ctype.h": "c",
+        "stddef.h": "c",
+        "coreboot_tables.h": "c",
+        "helpers.h": "c",
+        "cctype": "c"
     }
 }

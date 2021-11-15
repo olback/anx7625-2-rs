@@ -1,34 +1,20 @@
 #![no_std]
 
-use core::mem::MaybeUninit;
-
 use {
     anx_fn_ptrs::AnxFnPtrs,
-    core::{ffi::c_void, marker::PhantomData},
-    embedded_hal::{
-        blocking::{
-            delay::DelayMs,
-            i2c::{Read as I2CRead, SevenBitAddress, Write as I2CWrite},
-        },
-        digital::v2::OutputPin,
-    },
+    core::{ffi::c_void, marker::PhantomData, mem::MaybeUninit},
+    embedded_hal::{blocking::delay::DelayMs, digital::v2::OutputPin},
     tinyrlibc as _,
 };
 
 mod anx_fn_ptrs;
-pub mod log;
+pub mod c_compat;
+mod i2c_read_write;
 
-pub trait I2CReadAndWrite<E>:
-    I2CRead<SevenBitAddress, Error = E> + I2CWrite<SevenBitAddress, Error = E>
-{
-}
-
-impl<T, E> I2CReadAndWrite<E> for T
-where
-    T: I2CRead<SevenBitAddress, Error = E>,
-    T: I2CWrite<SevenBitAddress, Error = E>,
-{
-}
+pub use {
+    anx_fn_ptrs::{edid as Edid, edid_modes as EdidModes},
+    i2c_read_write::I2CReadAndWrite,
+};
 
 pub struct Anx7625<
     Bus: I2CReadAndWrite<BusError>,
@@ -103,16 +89,38 @@ impl<
         &mut self,
         bus: &mut Bus,
         delay: &mut Delay,
-    ) -> Result<anx_fn_ptrs::edid, i32> {
+    ) -> Result<Edid, (i32, MaybeUninit<Edid>)> {
         let mut bus = bus as &mut dyn I2CReadAndWrite<BusError>;
         let mut delay = delay as &mut dyn DelayMs<u32>;
         let mut edid_d = MaybeUninit::<anx_fn_ptrs::edid>::uninit();
+        // Set struct to all 0
+        unsafe { (&mut edid_d as *mut _ as *mut anx_fn_ptrs::edid).write_bytes(0, 1) };
         match self.ptrs.dp_get_edid(
             &mut bus as *mut _ as *mut c_void,
             &mut delay as *mut _ as *mut c_void,
             &mut edid_d as *mut _ as *mut anx_fn_ptrs::edid,
         ) {
             0.. => Ok(unsafe { edid_d.assume_init() }),
+            err => Err((err, edid_d)),
+        }
+    }
+
+    pub fn dp_start(
+        &mut self,
+        bus: &mut Bus,
+        delay: &mut Delay,
+        edid_d: &Edid,
+        mode: EdidModes,
+    ) -> Result<(), i32> {
+        let mut bus = bus as &mut dyn I2CReadAndWrite<BusError>;
+        let mut delay = delay as &mut dyn DelayMs<u32>;
+        match self.ptrs.dp_start(
+            &mut bus as *mut _ as *mut c_void,
+            &mut delay as *mut _ as *mut c_void,
+            edid_d as *const _,
+            mode,
+        ) {
+            0.. => Ok(()),
             err => Err(err),
         }
     }

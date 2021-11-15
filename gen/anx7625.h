@@ -27,11 +27,18 @@ typedef struct AnxFnPtrs {
     int32_t (*set_pin)(struct AnxFnPtrs *anx, void *pin, bool state);
     int32_t (*i2c_writeb)(struct AnxFnPtrs *anx, void *bus, uint8_t addr, uint8_t offset, uint8_t val);
     int32_t (*i2c_readb)(struct AnxFnPtrs *anx, void *bus, uint8_t addr, uint8_t offset, uint8_t *data);
+    int32_t (*i2c_read_bytes)(struct AnxFnPtrs *anx, void *bus, uint8_t addr, uint8_t offset, uint8_t *data, uintptr_t len);
 } AnxFnPtrs;
 
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
+
+uint8_t *strcopy_compat(uint8_t *dst, const uint8_t *src);
+
+int32_t isupper_compat(uint8_t c);
+
+void assert_panic(bool b, const uint8_t *msg);
 
 void printk_u8(uint32_t level, const uint8_t *msg);
 

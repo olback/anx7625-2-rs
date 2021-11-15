@@ -12,6 +12,12 @@ use {
     },
 };
 
+// #[path = "../gen/anx7625.rs"]
+// #[allow(non_camel_case_types)]
+// /// cbindgen:ignore
+// mod gen;
+// use gen::*;
+
 include!("../gen/anx7625.rs");
 
 #[repr(C)]
@@ -32,6 +38,14 @@ pub struct AnxFnPtrs {
         offset: u8,
         data: *mut u8,
     ) -> i32,
+    i2c_read_bytes: unsafe extern "C" fn(
+        anx: *mut AnxFnPtrs,
+        bus: *mut c_void,
+        addr: u8,
+        offset: u8,
+        data: *mut u8,
+        len: usize,
+    ) -> i32,
 }
 
 unsafe extern "C" fn delay(anx: *mut AnxFnPtrs, delay: *mut c_void, ms: u32) {
@@ -48,7 +62,7 @@ unsafe extern "C" fn set_pin(anx: *mut AnxFnPtrs, pin: *mut c_void, state: bool)
     p.set_state(PinState::from(state));
     // (**core::mem::transmute::<_, &mut &mut dyn OutputPin<Error = Infallible>>(pin))
     //     .set_state(PinState::from(state));
-    1
+    0
 }
 
 unsafe extern "C" fn i2c_writeb(
@@ -61,8 +75,11 @@ unsafe extern "C" fn i2c_writeb(
     log::trace!("i2c_writeb addr:{} offset:{} val:{}", addr, offset, val);
     let mut b: &mut &mut dyn I2CReadAndWrite<Infallible> = core::mem::transmute(bus);
     match b.write(addr, &[offset, val]) {
-        Ok(_) => 1,
-        Err(_) => -1,
+        Ok(_) => 0,
+        Err(_) => {
+            log::error!("i2c_writeb write");
+            -1
+        }
     }
 }
 
@@ -76,12 +93,43 @@ unsafe extern "C" fn i2c_readb(
     log::trace!("i2c_readb addr:{} offset:{}", addr, offset);
     let mut b: &mut &mut dyn I2CReadAndWrite<Infallible> = core::mem::transmute(bus);
     let mut slice = [0u8];
+    if let Err(e) = b.write(addr, &[offset]) {
+        log::error!("i2c_readb write");
+        return -1;
+    }
     match b.read(addr, &mut slice) {
         Ok(_) => {
-            *data = slice[0];
-            slice[0] as i32
+            data.write(slice[0]); // *data  = slice[0];
+            0
         }
-        Err(_) => -1,
+        Err(_) => {
+            log::error!("i2c_readb read");
+            -1
+        }
+    }
+}
+
+unsafe extern "C" fn i2c_read_bytes(
+    anx: *mut AnxFnPtrs,
+    bus: *mut c_void,
+    addr: u8,
+    offset: u8,
+    data: *mut u8,
+    len: usize,
+) -> i32 {
+    log::trace!("i2c_read_bytes addr:{} offset:{}", addr, offset);
+    let mut b: &mut &mut dyn I2CReadAndWrite<Infallible> = core::mem::transmute(bus);
+    if let Err(e) = b.write(addr, &[offset]) {
+        log::error!("i2c_read_bytes offset write");
+        return -1;
+    }
+    let mut slice = core::slice::from_raw_parts_mut(data, len);
+    match b.read(addr, &mut slice) {
+        Ok(_) => 0,
+        Err(_) => {
+            log::error!("i2c_read_bytes read");
+            -1
+        }
     }
 }
 
@@ -92,10 +140,11 @@ impl AnxFnPtrs {
             set_pin,
             i2c_writeb,
             i2c_readb,
+            i2c_read_bytes,
         }
     }
 
-    pub fn init(
+    pub(crate) fn init(
         &mut self,
         bus: *mut c_void,
         delay: *mut c_void,
@@ -106,11 +155,25 @@ impl AnxFnPtrs {
         unsafe { anx7625_init(self as *mut _, bus, delay, video_on, video_rst, otg_on) }
     }
 
-    pub fn wait_hpd_event(&mut self, bus: *mut c_void, delay: *mut c_void) {
+    pub(crate) fn wait_hpd_event(&mut self, bus: *mut c_void, delay: *mut c_void) {
         unsafe { anx7625_wait_hpd_event(self as *mut _, bus, delay) }
     }
 
-    pub fn dp_get_edid(&mut self, bus: *mut c_void, delay: *mut c_void, edid_d: *mut edid) -> i32 {
+    pub(crate) fn dp_get_edid(
+        &mut self,
+        bus: *mut c_void,
+        delay: *mut c_void,
+        edid_d: *mut edid,
+    ) -> i32 {
         unsafe { anx7625_dp_get_edid(self as *mut _, bus, delay, edid_d) }
+    }
+    pub(crate) fn dp_start(
+        &mut self,
+        bus: *mut c_void,
+        delay: *mut c_void,
+        edid_d: *const edid,
+        mode: edid_modes,
+    ) -> i32 {
+        unsafe { anx7625_dp_start(self as *mut _, bus, delay, edid_d, mode) }
     }
 }

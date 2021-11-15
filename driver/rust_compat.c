@@ -1,4 +1,4 @@
-#include "logging.h"
+#include "rust_compat.h"
 
 void printk(uint32_t level, const char *msg)
 {

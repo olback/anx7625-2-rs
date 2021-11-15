@@ -593,7 +593,7 @@ int32_t edid_read(AnxFnPtrs *anx, void *bus, void *delay, uint8_t offset, uint8_
         {
             sp_tx_rst_aux(anx, bus);
             ANXERROR("edid read failed, reset!\n");
-            // cnt++; // Why? We're in a loop that already does that
+            // cnt++; // TODO: Why? We're in a loop that already does that
         }
         else
         {

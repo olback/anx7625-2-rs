@@ -14,6 +14,7 @@ pub enum edid_modes {
     EDID_MODE_AUTO = 8,
 }
 #[repr(C)]
+#[derive(Debug, Copy, Clone)]
 pub struct edid_mode {
     pub name: *const i8,
     pub pixel_clock: u32,
@@ -36,6 +37,7 @@ pub struct edid_mode {
     pub y_mm: u32,
 }
 #[repr(C)]
+#[derive(Debug, Copy, Clone)]
 pub struct edid {
     pub framebuffer_bits_per_pixel: u32,
     pub panel_bits_per_color: u32,

@@ -118,7 +118,7 @@ int32_t anx7625_dp_start(AnxFnPtrs *anx, void *bus, void *delay, const struct ed
 
         dt.vactive = envie_known_modes[mode].vactive;
         dt.vsync_len = envie_known_modes[mode].vsync_len;
-        ;
+
         dt.vback_porch = envie_known_modes[mode].vback_porch;
         dt.vfront_porch = envie_known_modes[mode].vfront_porch;
         dt.hpol = envie_known_modes[mode].hpol;
@@ -430,12 +430,12 @@ int32_t anx7625_api_dsi_config(AnxFnPtrs *anx, void *bus, void *delay, struct di
     ret = anx7625_reg_write(anx, bus, RX_P1_ADDR, MIPI_PHY_CONTROL_3, val);
 
     /*
-	 * Decreased HS prepare tg delay from 160ns to 80ns work with
-	 *     a) Dragon board 810 series (Qualcomm AP)
-	 *     b) Moving Pixel DSI source (PG3A pattern generator +
-	 *        P332 D-PHY Probe) default D-PHY tg 5ns/step
-	 */
-    //ret |= anx7625_reg_write(bus, RX_P1_ADDR, MIPI_TIME_HS_PRPR, 0x10);
+     * Decreased HS prepare tg delay from 160ns to 80ns work with
+     *     a) Dragon board 810 series (Qualcomm AP)
+     *     b) Moving Pixel DSI source (PG3A pattern generator +
+     *        P332 D-PHY Probe) default D-PHY tg 5ns/step
+     */
+    // ret |= anx7625_reg_write(bus, RX_P1_ADDR, MIPI_TIME_HS_PRPR, 0x10);
 
     /* enable DSI mode */
     ret |= anx7625_write_or(anx, bus, RX_P1_ADDR, MIPI_DIGITAL_PLL_18,
@@ -918,7 +918,7 @@ int32_t anx7625_power_on_init(AnxFnPtrs *anx, void *bus, void *delay)
         }
         ANXINFO("Init interface.");
 
-        //anx7625_disable_pd_protocol(bus);
+        // anx7625_disable_pd_protocol(bus);
         anx7625_reg_read(anx, bus, RX_P0_ADDR, OCM_FW_VERSION, &version);
         anx7625_reg_read(anx, bus, RX_P0_ADDR, OCM_FW_REVERSION, &revision);
 

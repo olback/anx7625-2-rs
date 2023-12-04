@@ -50,14 +50,14 @@ pub struct AnxFnPtrs {
 
 unsafe extern "C" fn delay(anx: *mut AnxFnPtrs, delay: *mut c_void, ms: u32) {
     // Ah, yes
-    log::trace!("delay delay:{:p} time:{}ms", delay, ms);
+    // log::trace!("delay delay:{:p} time:{}ms", delay, ms);
     let mut d: &mut &mut dyn DelayMs<u32> = core::mem::transmute(delay);
     d.delay_ms(ms);
     // (**core::mem::transmute::<_, &mut &mut dyn DelayMs<u32>>(delay)).delay_ms(ms);
 }
 
 unsafe extern "C" fn set_pin(anx: *mut AnxFnPtrs, pin: *mut c_void, state: bool) -> i32 {
-    log::trace!("set_pin pin:{:p} state:{}", pin, state);
+    // log::trace!("set_pin pin:{:p} state:{}", pin, state);
     let mut p: &mut &mut dyn OutputPin<Error = Infallible> = core::mem::transmute(pin);
     p.set_state(PinState::from(state));
     // (**core::mem::transmute::<_, &mut &mut dyn OutputPin<Error = Infallible>>(pin))
@@ -72,7 +72,7 @@ unsafe extern "C" fn i2c_writeb(
     offset: u8,
     val: u8,
 ) -> i32 {
-    log::trace!("i2c_writeb addr:{} offset:{} val:{}", addr, offset, val);
+    // log::trace!("i2c_writeb addr:{} offset:{} val:{}", addr, offset, val);
     let mut b: &mut &mut dyn I2CReadAndWrite<Infallible> = core::mem::transmute(bus);
     match b.write(addr, &[offset, val]) {
         Ok(_) => 0,
@@ -90,7 +90,7 @@ unsafe extern "C" fn i2c_readb(
     offset: u8,
     data: *mut u8,
 ) -> i32 {
-    log::trace!("i2c_readb addr:{} offset:{}", addr, offset);
+    // log::trace!("i2c_readb addr:{} offset:{}", addr, offset);
     let mut b: &mut &mut dyn I2CReadAndWrite<Infallible> = core::mem::transmute(bus);
     let mut slice = [0u8];
     if let Err(e) = b.write(addr, &[offset]) {
@@ -117,7 +117,7 @@ unsafe extern "C" fn i2c_read_bytes(
     data: *mut u8,
     len: usize,
 ) -> i32 {
-    log::trace!("i2c_read_bytes addr:{} offset:{}", addr, offset);
+    // log::trace!("i2c_read_bytes addr:{} offset:{}", addr, offset);
     let mut b: &mut &mut dyn I2CReadAndWrite<Infallible> = core::mem::transmute(bus);
     if let Err(e) = b.write(addr, &[offset]) {
         log::error!("i2c_read_bytes offset write");

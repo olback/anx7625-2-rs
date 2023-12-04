@@ -2,4 +2,4 @@
 
 todo:
 * [ ] fix c warnings
-* [ ] figure out why it's not working, it's all here I think
+* [x] figure out why it's not working, it's all here I think
